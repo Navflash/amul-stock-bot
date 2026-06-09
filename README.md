@@ -79,8 +79,15 @@ In your Railway project, go to **Variables** and add:
 | Variable | Value |
 |---|---|
 | `BOT_TOKEN` | Your token from @BotFather |
+| `STATE_DIR` | `/data` |
 
-### 4. Deploy
+### 4. Add a persistent volume
+
+Go to your service → **Volumes** → **New Volume** → mount path `/data`.
+
+This keeps `state.json` alive across redeploys so subscribers don't need to re-enter their pincode.
+
+### 5. Deploy
 
 Railway deploys automatically on every push to `main`. Check the **Logs** tab to confirm the bot started:
 
@@ -89,9 +96,9 @@ Bot ready. 0 substore session(s) active.
 Application started
 ```
 
-### 5. Start using it
+### 6. Share with others
 
-Open your bot on Telegram and send `/setpincode 500046`.
+Search for your bot on Telegram by its username (find it via @BotFather → `/mybots`) and share the `t.me/<username>` link. Anyone who opens it can subscribe with `/setpincode`.
 
 ---
 
@@ -102,7 +109,7 @@ Open your bot on Telegram and send `/setpincode 500046`.
 3. Every 5 minutes, the bot fetches the protein product catalogue for each subscribed region and checks `available` and `inventory_quantity` fields
 4. When a product transitions from out-of-stock to in-stock, all subscribers in that region are notified instantly
 
-State (subscribed users + last known stock status) is saved to `state.json`. On Railway, this resets on each redeploy — subscribers will need to `/setpincode` again after a redeploy.
+State (subscribed users + last known stock status) is saved to `state.json`. With the Railway Volume mounted at `/data`, this persists across redeploys — subscribers keep their pincode.
 
 ---
 
