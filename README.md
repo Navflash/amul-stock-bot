@@ -27,7 +27,7 @@ A Telegram bot that checks [shop.amul.com](https://shop.amul.com) for Amul High 
 **Prerequisites:** Python 3.10+
 
 ```bash
-git clone https://github.com/your-username/amul-stock-bot.git
+git clone https://github.com/Navflash/amul-stock-bot.git
 cd amul-stock-bot
 
 python3 -m venv .venv
@@ -55,7 +55,7 @@ Railway gives **$5 free credit per month** — enough to run this bot continuous
 git init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/your-username/amul-stock-bot.git
+git remote add origin https://github.com/Navflash/amul-stock-bot.git
 git push -u origin main
 ```
 
