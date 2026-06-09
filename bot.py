@@ -20,7 +20,7 @@ from amul_client import AmulClient
 load_dotenv()
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
-STATE_FILE = Path("state.json")
+STATE_FILE = Path(os.environ.get("STATE_DIR", ".")) / "state.json"
 CHECK_INTERVAL_SECONDS = 300  # every 5 minutes
 
 TRACKED_PRODUCTS = [
