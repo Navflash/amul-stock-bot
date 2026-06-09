@@ -219,7 +219,9 @@ class AmulClient:
         url = _build_products_url(substore_id)
         async with self._session.get(url, headers=self._headers({"referer": "https://shop.amul.com/en/browse/protein"})) as resp:
             data = await resp.json(content_type=None)
-            return data.get("data", [])
+            products = data.get("data", [])
+            logger.info("Amul API → %d products fetched for substore %r", len(products), substore_alias)
+            return products
 
     async def check_product(self, alias: str) -> Optional[dict]:
         products = await self.get_protein_products()

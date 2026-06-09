@@ -7,9 +7,8 @@ product comes back in stock for their delivery region.
 import json
 import logging
 import os
-from datetime import time
+import re
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -21,8 +20,7 @@ load_dotenv()
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 STATE_FILE = Path("state.json")
-IST = ZoneInfo("Asia/Kolkata")
-CHECK_TIMES = [time(9, 0, tzinfo=IST), time(11, 0, tzinfo=IST), time(13, 0, tzinfo=IST), time(19, 0, tzinfo=IST)]
+CHECK_INTERVAL_SECONDS = 300  # every 5 minutes
 
 TRACKED_PRODUCTS = [
     {
@@ -35,10 +33,20 @@ TRACKED_PRODUCTS = [
     },
 ]
 
+class _RedactTokenFilter(logging.Filter):
+    _pattern = re.compile(r"bot\d+:[A-Za-z0-9_-]+")
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.msg = self._pattern.sub("bot<REDACTED>", str(record.msg))
+        return True
+
+
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     level=logging.INFO,
 )
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpx").addFilter(_RedactTokenFilter())
 logger = logging.getLogger(__name__)
 
 
@@ -228,7 +236,7 @@ async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         "/stop — Unsubscribe from alerts\n"
         "/help — This message\n\n"
         f"{pincode_info}\n"
-        "Check times: 9:00 AM, 11:00 AM, 1:00 PM, 7:00 PM (IST)",
+        "Checks every 5 minutes.",
         parse_mode="Markdown",
     )
 
@@ -254,15 +262,15 @@ async def _stock_check_job(ctx: ContextTypes.DEFAULT_TYPE):
             logger.warning("No client for substore %r, skipping", substore)
             continue
 
-        # Reinitialise stale sessions (> 4 days old)
-        if client.session_age_days > 4:
-            pincode = state["users"][chat_ids[0]]["pincode"]
-            logger.info("Reinitialising session for substore %s (pincode %s)", substore, pincode)
-            try:
-                await client.reinit(pincode)
-            except Exception as e:
-                logger.error("Session reinit failed for %s: %s", substore, e)
-                continue
+        # Session reinit disabled — re-enable if sessions expire after long uptime
+        # if client.session_age_days > 4:
+        #     pincode = state["users"][chat_ids[0]]["pincode"]
+        #     logger.info("Reinitialising session for substore %s (pincode %s)", substore, pincode)
+        #     try:
+        #         await client.reinit(pincode)
+        #     except Exception as e:
+        #         logger.error("Session reinit failed for %s: %s", substore, e)
+        #         continue
 
         try:
             all_products = await client.get_protein_products()
@@ -320,6 +328,7 @@ async def _stock_check_job(ctx: ContextTypes.DEFAULT_TYPE):
                     await ctx.bot.send_message(
                         int(chat_id), text, parse_mode="Markdown", reply_markup=markup
                     )
+                    logger.info("Telegram → stock alert sent to chat %s for %r", chat_id, alias)
                 except Exception as e:
                     logger.error("Failed to notify chat %s: %s", chat_id, e)
 
@@ -373,8 +382,7 @@ def main():
     app.add_handler(CommandHandler("help", cmd_help))
 
     assert app.job_queue, "Job queue unavailable — install python-telegram-bot[job-queue]"
-    for check_time in CHECK_TIMES:
-        app.job_queue.run_daily(_stock_check_job, time=check_time)
+    app.job_queue.run_repeating(_stock_check_job, interval=CHECK_INTERVAL_SECONDS, first=10)
 
     app.run_polling(drop_pending_updates=True)
 
