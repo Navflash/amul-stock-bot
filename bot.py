@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -44,6 +45,7 @@ class _RedactTokenFilter(logging.Filter):
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     level=logging.INFO,
+    stream=sys.stdout,
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpx").addFilter(_RedactTokenFilter())
